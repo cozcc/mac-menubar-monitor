@@ -43,10 +43,12 @@ http://127.0.0.1:51280
 
 简洁版网页只保留四块：
 
-- 状态：显示 Hermes、OpenClaw、WorkBuddy 路径和 Token 总量。
+- 软件状态：显示本地服务、菜单栏 CPU/MEM、Hermes、OpenClaw 和 Token 总量。
 - 模型配置：统一填写目标、provider、Base URL、模型，再预演或应用。
 - 路径设置：折叠展示 Hermes、OpenClaw、WorkBuddy / CodeBuddy 的本地路径。
 - 结果：显示每次操作返回的 JSON。
+
+“软件状态”里可以勾选 `顶端菜单栏显示 CPU / MEM`。勾选后会启动本软件自带的菜单栏 helper，在 macOS 顶端菜单栏显示 `CPU xx%  MEM yy%`；取消勾选会停止该 helper。
 
 网页端可保存的配置包括：
 
@@ -55,7 +57,7 @@ http://127.0.0.1:51280
 - WorkBuddy / CodeBuddy 模型配置文件。
 - WorkBuddy CLI 路径。
 
-后续要继续修改界面时，核心页面在 `model_console.py` 的 `INDEX_HTML` 常量中；后端接口集中在 `/api/status`、`/api/settings` 和 `/api/apply`。
+后续要继续修改界面时，核心页面在 `model_console.py` 的 `INDEX_HTML` 常量中；后端接口集中在 `/api/status`、`/api/settings` 和 `/api/apply`。菜单栏 helper 源码在 `menubar/TianyuanMenuBarMonitor.m`。
 
 可选安装后台自启动：
 

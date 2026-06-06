@@ -30,9 +30,40 @@ Path(plist).write_text(text, encoding="utf-8")
 PY
 
 DOMAIN="gui/$(id -u)"
-launchctl bootout "$DOMAIN" "$PLIST" >/dev/null 2>&1 || true
-launchctl bootstrap "$DOMAIN" "$PLIST"
-launchctl kickstart -k "$DOMAIN/com.tianyuan.model-console" >/dev/null 2>&1 || true
+LABEL="com.tianyuan.model-console"
+
+python3 - "$DOMAIN" "$LABEL" "$PLIST" <<'PY'
+import subprocess
+import sys
+from pathlib import Path
+
+domain, label, plist = sys.argv[1:]
+
+def run(args, timeout=8):
+    try:
+        return subprocess.run(
+            args,
+            timeout=timeout,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+    except subprocess.TimeoutExpired:
+        return subprocess.CompletedProcess(args, 124, "", "timeout")
+
+if not Path(plist).exists():
+    raise SystemExit(f"plist 不存在：{plist}")
+
+run(["launchctl", "bootout", f"{domain}/{label}"], timeout=5)
+bootstrap = run(["launchctl", "bootstrap", domain, plist], timeout=8)
+if bootstrap.returncode != 0:
+    current = run(["launchctl", "print", f"{domain}/{label}"], timeout=5)
+    if current.returncode != 0:
+        message = (bootstrap.stderr or bootstrap.stdout or "launchctl bootstrap failed").strip()
+        raise SystemExit(message)
+
+run(["launchctl", "kickstart", "-k", f"{domain}/{label}"], timeout=5)
+PY
 
 echo "已安装后台自启动：$PLIST"
 echo "网页地址：http://$HOST:$PORT"

@@ -12,3 +12,5 @@
 默认网页地址是 `http://127.0.0.1:51280`。
 
 安装后不会自动写入 WorkBuddy / CodeBuddy 模型。打开网页后，在“路径设置”里填写 OpenClaw、WorkBuddy / CodeBuddy 等本地路径，再在“模型配置”里填写 provider、Base URL、模型和 API Key 来源。
+
+网页“软件状态”里可以勾选是否在 macOS 顶端菜单栏显示 CPU / MEM。

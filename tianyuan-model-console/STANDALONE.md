@@ -9,6 +9,7 @@
 ## 产品功能
 
 - 简洁版首页：状态、模型配置、路径设置、结果四块。
+- 可选顶端菜单栏显示 CPU / MEM，并可在网页里勾选启停。
 - 监控 Hermes 当前 `model.default`、`model.provider`、`model.base_url` 和 `custom_providers`。
 - 监控 OpenClaw 智能体、默认模型、provider、Base URL 和本地模型目录。
 - 在网页或命令行中预演/应用模型切换，具体到 provider、Base URL、模型 ID 和 API 模式。
@@ -57,7 +58,7 @@ TMC_PORT=51380 /Users/vv/.openclaw/openfei/tianyuan-model-console/standalone/Tia
 - “软件配置”：保存 Hermes、OpenClaw、WorkBuddy / CodeBuddy 的配置文件和日志/会话目录。
 - “WorkBuddy / CodeBuddy”：填写 provider、Base URL、模型 ID、API Key 来源、工具调用和图片能力，再预演或应用。
 
-后续修改界面主要编辑 `model_console.py` 的 `INDEX_HTML`；后端 API 入口保持在 `/api/status`、`/api/settings` 和 `/api/apply`。
+后续修改界面主要编辑 `model_console.py` 的 `INDEX_HTML`；后端 API 入口保持在 `/api/status`、`/api/settings` 和 `/api/apply`。菜单栏 CPU/MEM helper 在 `menubar/TianyuanMenuBarMonitor.m`。
 
 ## 打包发布
 

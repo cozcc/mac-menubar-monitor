@@ -23,6 +23,7 @@
   "features": [
     "中文网页控制台",
     "简洁版本地软件界面",
+    "可选顶端菜单栏 CPU/MEM 显示",
     "Hermes provider/Base URL/model 监控",
     "OpenClaw 智能体模型路由监控",
     "一键预演和应用模型切换",

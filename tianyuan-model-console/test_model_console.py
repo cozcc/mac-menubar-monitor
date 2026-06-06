@@ -175,11 +175,13 @@ class ModelConsoleTests(unittest.TestCase):
                 "openclaw_config": str(custom_openclaw),
                 "workbuddy_models": "~/custom-workbuddy-models.json",
                 "openclaw_logs": "",
+                "menubar_monitor_enabled": True,
             },
             config_path=config_path,
         )
         saved = json.loads(config_path.read_text(encoding="utf-8"))
         self.assertEqual(saved["openclaw_config"], str(custom_openclaw))
+        self.assertEqual(saved["menubar_monitor_enabled"], True)
         self.assertNotIn("openclaw_logs", saved)
         paths = mc.Paths.from_env(settings=result["settings"])
         self.assertEqual(paths.openclaw_config, custom_openclaw)

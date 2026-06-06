@@ -15,8 +15,10 @@ import json
 import os
 import re
 import shutil
+import subprocess
 import sys
 import tempfile
+import time
 from dataclasses import dataclass
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -41,6 +43,9 @@ PLUGIN_NAME = "天元模型控制台"
 PLUGIN_PACKAGE_NAME = "@tianyuan/model-console-openclaw"
 PLUGIN_VERSION = "2026.6.6"
 PLUGIN_ROOT = Path(__file__).resolve().parent
+MENUBAR_LABEL = "com.tianyuan.model-console.menubar"
+MENUBAR_SOURCE = PLUGIN_ROOT / "menubar" / "TianyuanMenuBarMonitor.m"
+MENUBAR_BINARY = PLUGIN_ROOT / "menubar" / "TianyuanMenuBarMonitor"
 
 SECRET_KEY_RE = re.compile(r"(key|token|secret|password|cookie|bearer|authorization)", re.I)
 SAFE_SECRET_STATUS_KEYS = {
@@ -63,6 +68,7 @@ SETTING_PATH_KEYS = {
     "codebuddy_models": ("TMC_CODEBUDDY_MODELS", DEFAULT_CODEBUDDY_MODELS),
     "workbuddy_cli": ("TMC_WORKBUDDY_CLI", DEFAULT_WORKBUDDY_CLI),
 }
+SETTING_BOOL_KEYS = {"menubar_monitor_enabled"}
 TOKEN_KEYS = {
     "prompt": {
         "prompt_tokens",
@@ -185,11 +191,17 @@ def save_user_settings(payload: dict[str, Any], config_path: Path | None = None)
             settings[key] = str(Path(value).expanduser())
         else:
             settings.pop(key, None)
+    for key in SETTING_BOOL_KEYS:
+        if key in payload:
+            settings[key] = bool(payload.get(key))
     atomic_write_json(path, settings)
+    if config_path is None and "menubar_monitor_enabled" in payload:
+        sync_menubar_monitor(settings)
     return {
         "config_path": str(path),
         "settings": settings,
         "effective_paths": paths_to_dict(Paths.from_env(settings=settings)),
+        "software": software_status(settings=settings),
     }
 
 
@@ -214,6 +226,111 @@ def settings_info(paths: Paths) -> dict[str, Any]:
         "persisted": load_user_settings(),
         "effective_paths": paths_to_dict(paths),
         "env_overrides": {key: env for key, (env, _) in SETTING_PATH_KEYS.items() if os.getenv(env)},
+    }
+
+
+def bool_setting(settings: dict[str, Any], key: str, default: bool = False) -> bool:
+    value = settings.get(key, default)
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return bool(value)
+
+
+def running_pids_for_path(path: Path) -> list[int]:
+    if not path.exists():
+        return []
+    result = subprocess.run(["pgrep", "-f", str(path)], text=True, capture_output=True, check=False)
+    pids: list[int] = []
+    for line in result.stdout.splitlines():
+        try:
+            pid = int(line.strip())
+        except ValueError:
+            continue
+        if pid != os.getpid():
+            pids.append(pid)
+    return pids
+
+
+def build_menubar_monitor() -> dict[str, Any]:
+    if not MENUBAR_SOURCE.exists():
+        raise FileNotFoundError(f"菜单栏 helper 源文件不存在：{MENUBAR_SOURCE}")
+    needs_build = not MENUBAR_BINARY.exists()
+    if MENUBAR_BINARY.exists():
+        needs_build = MENUBAR_SOURCE.stat().st_mtime > MENUBAR_BINARY.stat().st_mtime
+    if not needs_build:
+        return {"built": False, "binary": str(MENUBAR_BINARY)}
+    MENUBAR_BINARY.parent.mkdir(parents=True, exist_ok=True)
+    cmd = [
+        "clang",
+        "-fobjc-arc",
+        "-mmacosx-version-min=12.0",
+        str(MENUBAR_SOURCE),
+        "-o",
+        str(MENUBAR_BINARY),
+        "-framework",
+        "Cocoa",
+    ]
+    result = subprocess.run(cmd, text=True, capture_output=True, check=False)
+    if result.returncode != 0:
+        raise RuntimeError((result.stderr or result.stdout or "菜单栏 helper 编译失败").strip())
+    subprocess.run(["codesign", "--force", "--sign", "-", str(MENUBAR_BINARY)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+    return {"built": True, "binary": str(MENUBAR_BINARY)}
+
+
+def start_menubar_monitor() -> dict[str, Any]:
+    build = build_menubar_monitor()
+    pids = running_pids_for_path(MENUBAR_BINARY)
+    if not pids:
+        subprocess.Popen([str(MENUBAR_BINARY)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+        time.sleep(0.5)
+    return {"requested": "start", "build": build, **menubar_status(load_user_settings())}
+
+
+def stop_menubar_monitor() -> dict[str, Any]:
+    pids = running_pids_for_path(MENUBAR_BINARY)
+    for pid in pids:
+        try:
+            os.kill(pid, 15)
+        except OSError:
+            pass
+    if pids:
+        time.sleep(0.5)
+    subprocess.run(["launchctl", "remove", MENUBAR_LABEL], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+    return {"requested": "stop", **menubar_status(load_user_settings())}
+
+
+def sync_menubar_monitor(settings: dict[str, Any] | None = None) -> dict[str, Any]:
+    settings = load_user_settings() if settings is None else settings
+    if bool_setting(settings, "menubar_monitor_enabled"):
+        return start_menubar_monitor()
+    return stop_menubar_monitor()
+
+
+def menubar_status(settings: dict[str, Any] | None = None) -> dict[str, Any]:
+    settings = load_user_settings() if settings is None else settings
+    pids = running_pids_for_path(MENUBAR_BINARY)
+    return {
+        "enabled": bool_setting(settings, "menubar_monitor_enabled"),
+        "running": bool(pids),
+        "pids": pids,
+        "source": str(MENUBAR_SOURCE),
+        "binary": str(MENUBAR_BINARY),
+        "binary_exists": MENUBAR_BINARY.exists(),
+    }
+
+
+def software_status(settings: dict[str, Any] | None = None) -> dict[str, Any]:
+    settings = load_user_settings() if settings is None else settings
+    host = os.getenv("TMC_HOST", "127.0.0.1")
+    port = os.getenv("TMC_PORT", "51280")
+    return {
+        "name": PLUGIN_NAME,
+        "version": PLUGIN_VERSION,
+        "root": str(PLUGIN_ROOT),
+        "pid": os.getpid(),
+        "url": f"http://{host}:{port}",
+        "config_path": str(app_config_path()),
+        "menubar": menubar_status(settings),
     }
 
 
@@ -1097,9 +1214,11 @@ def install_workbuddy_model(paths: Paths, payload: dict[str, Any], dry_run: bool
 
 
 def status(paths: Paths, include_usage: bool = True) -> dict[str, Any]:
+    settings = load_user_settings()
     out = {
         "generated_at": dt.datetime.now(dt.timezone.utc).isoformat(),
         "settings": settings_info(paths),
+        "software": software_status(settings=settings),
         "hermes": summarize_hermes(paths),
         "openclaw": summarize_openclaw(paths),
         "plugin": plugin_info(paths),
@@ -1137,7 +1256,7 @@ INDEX_HTML = r"""<!doctype html>
     pre { margin:0; max-height:240px; overflow:auto; white-space:pre-wrap; word-break:break-word; background:#f2f5f8; border:1px solid #e1e7ee; border-radius:6px; padding:10px; font-size:12px; }
     .grid { display:grid; grid-template-columns:repeat(2, minmax(260px,1fr)); gap:10px 12px; }
     .actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
-    .status { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:8px; }
+    .status { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px,1fr)); gap:8px; }
     .tile { background:var(--soft); border:1px solid #d7e7f4; border-radius:8px; padding:10px; min-height:74px; }
     .tile b { display:block; font-size:12px; color:var(--muted); margin-bottom:5px; }
     .tile span { display:block; font-size:14px; word-break:break-word; }
@@ -1153,12 +1272,16 @@ INDEX_HTML = r"""<!doctype html>
   </header>
   <main>
     <section>
-      <h2>状态</h2>
+      <h2>软件状态</h2>
       <div class="status">
+        <div class="tile"><b>本地软件</b><span id="tileService">正在加载</span></div>
+        <div class="tile"><b>菜单栏</b><span id="tileMenubar">正在加载</span></div>
         <div class="tile"><b>Hermes</b><span id="tileHermes">正在加载</span></div>
         <div class="tile"><b>OpenClaw</b><span id="tileOpenclaw">正在加载</span></div>
-        <div class="tile"><b>WorkBuddy</b><span id="tileWorkbuddy">正在加载</span></div>
         <div class="tile"><b>Token</b><span id="tileUsage">正在加载</span></div>
+      </div>
+      <div class="actions">
+        <label><input id="menubarEnabled" type="checkbox" onchange="saveSettings()">顶端菜单栏显示 CPU / MEM</label>
       </div>
     </section>
 
@@ -1291,13 +1414,17 @@ async function loadStatus() {
   const effective = settings.effective_paths || {};
   for (const [key, id] of pathInputs) byId(id).value = effective[key] || '';
   byId('settingsPath').textContent = settings.config_path || '';
+  const software = statusCache.software || {};
+  const menubar = software.menubar || {};
+  byId('menubarEnabled').checked = Boolean(menubar.enabled);
 
   const hermesModel = statusCache.hermes?.model || {};
+  setText('tileService', software.pid ? '运行中 PID ' + software.pid : '运行中');
+  setText('tileMenubar', menubar.enabled ? (menubar.running ? 'CPU/MEM 显示中' : '已启用，未运行') : '未显示');
   setText('tileHermes', [hermesModel.provider, hermesModel.default].filter(Boolean).join(' / '));
   const agents = statusCache.openclaw?.agents || [];
   const main = agents.find(agent => agent.default) || agents[0] || {};
   setText('tileOpenclaw', main.model || '');
-  setText('tileWorkbuddy', effective.workbuddy_models || '');
   setText('tileUsage', String(statusCache.usage?.totals?.total ?? 0));
 
   const agentSelect = byId('agent');
@@ -1321,6 +1448,7 @@ async function loadStatus() {
 async function saveSettings() {
   const payload = {};
   for (const [key, id] of pathInputs) payload[key] = byId(id).value;
+  payload.menubar_monitor_enabled = byId('menubarEnabled').checked;
   setBusy(true);
   try {
     const res = await fetch('/api/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
@@ -1561,6 +1689,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.command == "serve":
         ConsoleHandler.paths = paths
+        sync_menubar_monitor(load_user_settings())
         server = ThreadingHTTPServer((args.host, args.port), ConsoleHandler)
         print(f"天元模型控制台已启动：http://{args.host}:{args.port}", flush=True)
         try:
