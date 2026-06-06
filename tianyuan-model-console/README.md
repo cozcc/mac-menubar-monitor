@@ -39,17 +39,14 @@ http://127.0.0.1:51280
 ~/Applications/Tianyuan Model Console
 ```
 
-安装器会复制软件、注册 OpenClaw 插件，并尝试把默认上游模型写入 WorkBuddy / CodeBuddy：
+安装器只复制软件并注册 OpenClaw 插件。OpenClaw、WorkBuddy / CodeBuddy 等路径和模型参数由用户在网页里的“软件配置”和“WorkBuddy / CodeBuddy”表单中自行填写。
 
-- provider：`oxo`
-- Base URL：`https://api.oxoapi.com/v1`
-- model：`qwen3.7-max`
+网页端可保存的配置包括：
 
-如需只安装软件和 OpenClaw 插件，不写 WorkBuddy / CodeBuddy：
-
-```bash
-TMC_SKIP_WORKBUDDY=1 /Users/vv/.openclaw/openfei/tianyuan-model-console/standalone/install.command
-```
+- Hermes 配置文件、密钥文件和会话目录。
+- OpenClaw 配置文件、模型目录、会话目录和日志目录。
+- WorkBuddy / CodeBuddy 模型配置文件。
+- WorkBuddy CLI 路径。
 
 可选安装后台自启动：
 
@@ -169,7 +166,9 @@ python3 /Users/vv/.openclaw/openfei/tianyuan-model-console/model_console.py inst
   --base-url https://api.oxoapi.com/v1
 ```
 
-默认会优先从 Hermes `auth.json` 中查找同名 provider 的本地 API Key，并写入 WorkBuddy 需要的 `apiKey` 字段；命令输出不会打印密钥。也可以显式指定环境变量：
+网页和命令行都会优先从用户填写的路径读取配置。WorkBuddy / CodeBuddy 写入时，用户可以直接填写 API Key、指定 API Key 环境变量，或允许工具从 Hermes / OpenClaw 的同名 provider 中读取本地密钥；命令输出不会打印密钥。
+
+也可以显式指定环境变量：
 
 ```bash
 python3 /Users/vv/.openclaw/openfei/tianyuan-model-console/model_console.py install-workbuddy \

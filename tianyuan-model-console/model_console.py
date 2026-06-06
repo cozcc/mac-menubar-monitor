@@ -34,6 +34,7 @@ DEFAULT_OPENCLAW_LOGS = Path("/Users/vv/.openclaw/logs")
 DEFAULT_WORKBUDDY_MODELS = Path("/Users/vv/.workbuddy/models.json")
 DEFAULT_CODEBUDDY_MODELS = Path("/Users/vv/.codebuddy/models.json")
 DEFAULT_WORKBUDDY_CLI = Path("/Applications/WorkBuddy.app/Contents/Resources/app.asar.unpacked/cli/bin/codebuddy")
+DEFAULT_APP_CONFIG = Path.home() / ".tianyuan-model-console" / "config.json"
 
 PLUGIN_ID = "tianyuan-model-console"
 PLUGIN_NAME = "天元模型控制台"
@@ -48,6 +49,19 @@ SAFE_SECRET_STATUS_KEYS = {
     "credential_present",
     "api_key_source",
     "api_key_written",
+}
+
+SETTING_PATH_KEYS = {
+    "hermes_config": ("TMC_HERMES_CONFIG", DEFAULT_HERMES_CONFIG),
+    "hermes_auth": ("TMC_HERMES_AUTH", DEFAULT_HERMES_AUTH),
+    "hermes_sessions": ("TMC_HERMES_SESSIONS", DEFAULT_HERMES_SESSIONS),
+    "openclaw_config": ("TMC_OPENCLAW_CONFIG", DEFAULT_OPENCLAW_CONFIG),
+    "openclaw_models": ("TMC_OPENCLAW_MODELS", DEFAULT_OPENCLAW_MODELS),
+    "openclaw_sessions": ("TMC_OPENCLAW_SESSIONS", DEFAULT_OPENCLAW_SESSIONS),
+    "openclaw_logs": ("TMC_OPENCLAW_LOGS", DEFAULT_OPENCLAW_LOGS),
+    "workbuddy_models": ("TMC_WORKBUDDY_MODELS", DEFAULT_WORKBUDDY_MODELS),
+    "codebuddy_models": ("TMC_CODEBUDDY_MODELS", DEFAULT_CODEBUDDY_MODELS),
+    "workbuddy_cli": ("TMC_WORKBUDDY_CLI", DEFAULT_WORKBUDDY_CLI),
 }
 TOKEN_KEYS = {
     "prompt": {
@@ -98,18 +112,25 @@ class Paths:
     workbuddy_cli: Path = DEFAULT_WORKBUDDY_CLI
 
     @classmethod
-    def from_env(cls) -> "Paths":
+    def from_env(cls, settings: dict[str, Any] | None = None) -> "Paths":
+        settings = load_user_settings() if settings is None else settings
+
+        def configured_path(key: str) -> Path:
+            env_name, default = SETTING_PATH_KEYS[key]
+            value = os.getenv(env_name) or settings.get(key) or str(default)
+            return Path(str(value)).expanduser()
+
         return cls(
-            hermes_config=Path(os.getenv("TMC_HERMES_CONFIG", str(DEFAULT_HERMES_CONFIG))),
-            hermes_auth=Path(os.getenv("TMC_HERMES_AUTH", str(DEFAULT_HERMES_AUTH))),
-            hermes_sessions=Path(os.getenv("TMC_HERMES_SESSIONS", str(DEFAULT_HERMES_SESSIONS))),
-            openclaw_config=Path(os.getenv("TMC_OPENCLAW_CONFIG", str(DEFAULT_OPENCLAW_CONFIG))),
-            openclaw_models=Path(os.getenv("TMC_OPENCLAW_MODELS", str(DEFAULT_OPENCLAW_MODELS))),
-            openclaw_sessions=Path(os.getenv("TMC_OPENCLAW_SESSIONS", str(DEFAULT_OPENCLAW_SESSIONS))),
-            openclaw_logs=Path(os.getenv("TMC_OPENCLAW_LOGS", str(DEFAULT_OPENCLAW_LOGS))),
-            workbuddy_models=Path(os.getenv("TMC_WORKBUDDY_MODELS", str(DEFAULT_WORKBUDDY_MODELS))),
-            codebuddy_models=Path(os.getenv("TMC_CODEBUDDY_MODELS", str(DEFAULT_CODEBUDDY_MODELS))),
-            workbuddy_cli=Path(os.getenv("TMC_WORKBUDDY_CLI", str(DEFAULT_WORKBUDDY_CLI))),
+            hermes_config=configured_path("hermes_config"),
+            hermes_auth=configured_path("hermes_auth"),
+            hermes_sessions=configured_path("hermes_sessions"),
+            openclaw_config=configured_path("openclaw_config"),
+            openclaw_models=configured_path("openclaw_models"),
+            openclaw_sessions=configured_path("openclaw_sessions"),
+            openclaw_logs=configured_path("openclaw_logs"),
+            workbuddy_models=configured_path("workbuddy_models"),
+            codebuddy_models=configured_path("codebuddy_models"),
+            workbuddy_cli=configured_path("workbuddy_cli"),
         )
 
 
@@ -136,6 +157,64 @@ def atomic_write_text(path: Path, text: str) -> None:
 
 def atomic_write_json(path: Path, data: Any) -> None:
     atomic_write_text(path, json.dumps(data, ensure_ascii=False, indent=2) + "\n")
+
+
+def app_config_path() -> Path:
+    return Path(os.getenv("TMC_APP_CONFIG", str(DEFAULT_APP_CONFIG))).expanduser()
+
+
+def load_user_settings(config_path: Path | None = None) -> dict[str, Any]:
+    path = config_path or app_config_path()
+    if not path.exists():
+        return {}
+    try:
+        data = read_json(path)
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def save_user_settings(payload: dict[str, Any], config_path: Path | None = None) -> dict[str, Any]:
+    path = config_path or app_config_path()
+    settings = load_user_settings(path)
+    for key in SETTING_PATH_KEYS:
+        if key not in payload:
+            continue
+        value = str(payload.get(key) or "").strip()
+        if value:
+            settings[key] = str(Path(value).expanduser())
+        else:
+            settings.pop(key, None)
+    atomic_write_json(path, settings)
+    return {
+        "config_path": str(path),
+        "settings": settings,
+        "effective_paths": paths_to_dict(Paths.from_env(settings=settings)),
+    }
+
+
+def paths_to_dict(paths: Paths) -> dict[str, str]:
+    return {
+        "hermes_config": str(paths.hermes_config),
+        "hermes_auth": str(paths.hermes_auth),
+        "hermes_sessions": str(paths.hermes_sessions),
+        "openclaw_config": str(paths.openclaw_config),
+        "openclaw_models": str(paths.openclaw_models),
+        "openclaw_sessions": str(paths.openclaw_sessions),
+        "openclaw_logs": str(paths.openclaw_logs),
+        "workbuddy_models": str(paths.workbuddy_models),
+        "codebuddy_models": str(paths.codebuddy_models),
+        "workbuddy_cli": str(paths.workbuddy_cli),
+    }
+
+
+def settings_info(paths: Paths) -> dict[str, Any]:
+    return {
+        "config_path": str(app_config_path()),
+        "persisted": load_user_settings(),
+        "effective_paths": paths_to_dict(paths),
+        "env_overrides": {key: env for key, (env, _) in SETTING_PATH_KEYS.items() if os.getenv(env)},
+    }
 
 
 def backup_file(path: Path) -> Path:
@@ -1020,6 +1099,7 @@ def install_workbuddy_model(paths: Paths, payload: dict[str, Any], dry_run: bool
 def status(paths: Paths, include_usage: bool = True) -> dict[str, Any]:
     out = {
         "generated_at": dt.datetime.now(dt.timezone.utc).isoformat(),
+        "settings": settings_info(paths),
         "hermes": summarize_hermes(paths),
         "openclaw": summarize_openclaw(paths),
         "plugin": plugin_info(paths),
@@ -1050,7 +1130,9 @@ INDEX_HTML = r"""<!doctype html>
     th { color:var(--muted); font-weight:600; }
     label { display:block; font-size:12px; color:var(--muted); margin:10px 0 4px; }
     input, select { width:100%; padding:8px 9px; border:1px solid #cdd5df; border-radius:6px; background:#fff; font:inherit; }
+    input[type="checkbox"] { width:auto; margin-right:6px; }
     .row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .path-grid { display:grid; grid-template-columns:repeat(2, minmax(260px, 1fr)); gap:8px 12px; }
     .actions { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
     button { border:1px solid #0f5e9e; background:var(--accent); color:#fff; border-radius:6px; padding:8px 11px; font-weight:600; cursor:pointer; }
     button.secondary { background:#fff; color:var(--accent); }
@@ -1069,6 +1151,26 @@ INDEX_HTML = r"""<!doctype html>
     <div class="muted">本地查看 Hermes / OpenClaw 模型路由，一键切换上游通道，并汇总可推断的 Token 用量。密钥不会在页面显示。</div>
   </header>
   <main>
+    <section class="wide">
+      <h2>软件配置</h2>
+      <div class="path-grid">
+        <div><label>Hermes 配置文件</label><input id="cfgHermesConfig"></div>
+        <div><label>Hermes 密钥文件</label><input id="cfgHermesAuth"></div>
+        <div><label>Hermes 会话目录</label><input id="cfgHermesSessions"></div>
+        <div><label>OpenClaw 配置文件</label><input id="cfgOpenclawConfig"></div>
+        <div><label>OpenClaw 模型目录</label><input id="cfgOpenclawModels"></div>
+        <div><label>OpenClaw 会话目录</label><input id="cfgOpenclawSessions"></div>
+        <div><label>OpenClaw 日志目录</label><input id="cfgOpenclawLogs"></div>
+        <div><label>WorkBuddy 模型文件</label><input id="cfgWorkbuddyModels"></div>
+        <div><label>CodeBuddy 模型文件</label><input id="cfgCodebuddyModels"></div>
+        <div><label>WorkBuddy CLI</label><input id="cfgWorkbuddyCli"></div>
+      </div>
+      <div class="actions">
+        <button class="secondary" onclick="loadStatus()">重新读取</button>
+        <button onclick="saveSettings()">保存配置</button>
+      </div>
+      <div class="muted">配置文件：<span id="settingsPath"></span></div>
+    </section>
     <section>
       <h2>Hermes</h2>
       <div id="hermesStatus" class="muted">正在加载...</div>
@@ -1096,6 +1198,28 @@ INDEX_HTML = r"""<!doctype html>
       </div>
     </section>
     <section class="wide">
+      <h2>WorkBuddy / CodeBuddy</h2>
+      <div class="row">
+        <div><label>上游通道</label><input id="wProvider" placeholder="例如 openai 或自定义通道名"></div>
+        <div><label>模型</label><input id="wModel" placeholder="实际模型 ID"></div>
+      </div>
+      <label>Base URL</label><input id="wBase" placeholder="OpenAI 兼容 Base URL">
+      <div class="row">
+        <div><label>API Key</label><input id="wApiKey" type="password" placeholder="可留空"></div>
+        <div><label>API Key 环境变量</label><input id="wApiKeyEnv" placeholder="可留空"></div>
+      </div>
+      <div class="row">
+        <div><label>最大输入 Token</label><input id="wMaxInput" type="number" value="131072"></div>
+        <div><label>最大输出 Token</label><input id="wMaxOutput" type="number" value="8192"></div>
+      </div>
+      <label><input id="wToolCall" type="checkbox">支持工具调用</label>
+      <label><input id="wImages" type="checkbox">支持图片输入</label>
+      <div class="actions">
+        <button class="secondary" onclick="applyRoute('workbuddy', true)">预演</button>
+        <button onclick="applyRoute('workbuddy', false)">应用</button>
+      </div>
+    </section>
+    <section class="wide">
       <h2>上游通道</h2>
       <div id="providers"></div>
     </section>
@@ -1110,7 +1234,20 @@ INDEX_HTML = r"""<!doctype html>
   </main>
 <script>
 let statusCache = null;
+const pathInputs = [
+  ['hermes_config', 'cfgHermesConfig'],
+  ['hermes_auth', 'cfgHermesAuth'],
+  ['hermes_sessions', 'cfgHermesSessions'],
+  ['openclaw_config', 'cfgOpenclawConfig'],
+  ['openclaw_models', 'cfgOpenclawModels'],
+  ['openclaw_sessions', 'cfgOpenclawSessions'],
+  ['openclaw_logs', 'cfgOpenclawLogs'],
+  ['workbuddy_models', 'cfgWorkbuddyModels'],
+  ['codebuddy_models', 'cfgCodebuddyModels'],
+  ['workbuddy_cli', 'cfgWorkbuddyCli']
+];
 function esc(v) { return String(v ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function byId(id) { return document.getElementById(id); }
 function table(rows, headers) {
   if (!rows.length) return '<div class="muted">暂无记录。</div>';
   return '<table><thead><tr>' + headers.map(h => '<th>'+esc(h)+'</th>').join('') + '</tr></thead><tbody>' +
@@ -1119,52 +1256,89 @@ function table(rows, headers) {
 async function loadStatus() {
   const res = await fetch('/api/status');
   statusCache = await res.json();
+  const settings = statusCache.settings || {};
+  const effective = settings.effective_paths || {};
+  for (const [key, id] of pathInputs) {
+    byId(id).value = effective[key] || '';
+  }
+  byId('settingsPath').textContent = settings.config_path || '';
+
   const h = statusCache.hermes || {};
   const hm = h.model || {};
-  document.getElementById('hermesStatus').innerHTML = table([{上游通道: hm.provider, 模型: hm.default, BaseURL: hm.base_url, API模式: hm.api_mode}], ['上游通道','模型','BaseURL','API模式']);
-  document.getElementById('hProvider').value = String(hm.provider || '').replace(/^custom:/, '');
-  document.getElementById('hModel').value = hm.default || '';
-  document.getElementById('hBase').value = hm.base_url || '';
-  document.getElementById('hMode').value = hm.api_mode || 'chat_completions';
+  byId('hermesStatus').innerHTML = table([{上游通道: hm.provider, 模型: hm.default, BaseURL: hm.base_url, API模式: hm.api_mode}], ['上游通道','模型','BaseURL','API模式']);
+  byId('hProvider').value = String(hm.provider || '').replace(/^custom:/, '');
+  byId('hModel').value = hm.default || '';
+  byId('hBase').value = hm.base_url || '';
+  byId('hMode').value = hm.api_mode || 'chat_completions';
 
   const oc = statusCache.openclaw || {};
   const agents = oc.agents || [];
-  document.getElementById('openclawStatus').innerHTML = table(agents.map(a => ({智能体:a.id, 模型:a.model, 上游通道:a.provider, 默认:a.default})), ['智能体','模型','上游通道','默认']);
-  const select = document.getElementById('oAgent');
+  byId('openclawStatus').innerHTML = table(agents.map(a => ({智能体:a.id, 模型:a.model, 上游通道:a.provider, 默认:a.default})), ['智能体','模型','上游通道','默认']);
+  const select = byId('oAgent');
   select.innerHTML = agents.map(a => '<option value="'+esc(a.id)+'">'+esc(a.id)+'</option>').join('');
   const main = agents.find(a => a.default) || agents[0] || {};
   select.value = main.id || '';
   if (main.model && main.model.includes('/')) {
     const parts = main.model.split('/');
-    document.getElementById('oProvider').value = parts.shift();
-    document.getElementById('oModel').value = parts.join('/');
+    byId('oProvider').value = parts.shift();
+    byId('oModel').value = parts.join('/');
   }
   const providers = oc.providers || {};
-  const firstProvider = providers[document.getElementById('oProvider').value];
-  document.getElementById('oBase').value = firstProvider ? firstProvider.baseUrl : '';
+  const firstProvider = providers[byId('oProvider').value];
+  byId('oBase').value = firstProvider ? firstProvider.baseUrl : '';
   const providerRows = [];
   for (const [name, p] of Object.entries(providers)) providerRows.push({上游通道:name, BaseURL:p.baseUrl, API:p.api, 模型数:p.model_count});
-  document.getElementById('providers').innerHTML = table(providerRows, ['上游通道','BaseURL','API','模型数']);
+  byId('providers').innerHTML = table(providerRows, ['上游通道','BaseURL','API','模型数']);
   const usage = statusCache.usage || {};
   const usageRows = Object.entries(usage.by_model || {}).map(([model, u]) => ({模型:model, 输入:u.prompt, 输出:u.completion, 总计:u.total, 缓存读取:u.cache_read, 缓存写入:u.cache_write}));
-  document.getElementById('usage').innerHTML = table(usageRows, ['模型','输入','输出','总计','缓存读取','缓存写入']) +
+  byId('usage').innerHTML = table(usageRows, ['模型','输入','输出','总计','缓存读取','缓存写入']) +
     '<div class="muted">已扫描文件：'+esc(usage.scanned_file_count)+'；记录数：'+esc(usage.record_count)+'</div>';
 }
-async function applyRoute(target, dryRun) {
-  const payload = target === 'hermes'
-    ? {target, dry_run: dryRun, provider:hProvider.value, model:hModel.value, base_url:hBase.value, api_mode:hMode.value}
-    : {target, dry_run: dryRun, agent_id:oAgent.value, provider:oProvider.value, model:oModel.value, base_url:oBase.value};
+async function saveSettings() {
+  const payload = {};
+  for (const [key, id] of pathInputs) payload[key] = byId(id).value;
   document.querySelectorAll('button').forEach(b => b.disabled = true);
   try {
-    const res = await fetch('/api/apply', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+    const res = await fetch('/api/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
     const data = await res.json();
-    document.getElementById('result').textContent = JSON.stringify(data, null, 2);
+    byId('result').textContent = JSON.stringify(data, null, 2);
     await loadStatus();
   } finally {
     document.querySelectorAll('button').forEach(b => b.disabled = false);
   }
 }
-loadStatus().catch(err => { document.getElementById('result').textContent = String(err); });
+async function applyRoute(target, dryRun) {
+  let payload = {};
+  if (target === 'hermes') {
+    payload = {target, dry_run: dryRun, provider:byId('hProvider').value, model:byId('hModel').value, base_url:byId('hBase').value, api_mode:byId('hMode').value};
+  } else if (target === 'openclaw') {
+    payload = {target, dry_run: dryRun, agent_id:byId('oAgent').value, provider:byId('oProvider').value, model:byId('oModel').value, base_url:byId('oBase').value};
+  } else if (target === 'workbuddy') {
+    payload = {
+      target,
+      dry_run: dryRun,
+      provider: byId('wProvider').value,
+      model: byId('wModel').value,
+      base_url: byId('wBase').value,
+      api_key: byId('wApiKey').value,
+      api_key_env: byId('wApiKeyEnv').value,
+      supports_tool_call: byId('wToolCall').checked,
+      supports_images: byId('wImages').checked,
+      max_input_tokens: Number(byId('wMaxInput').value || 131072),
+      max_output_tokens: Number(byId('wMaxOutput').value || 8192)
+    };
+  }
+  document.querySelectorAll('button').forEach(b => b.disabled = true);
+  try {
+    const res = await fetch('/api/apply', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+    const data = await res.json();
+    byId('result').textContent = JSON.stringify(data, null, 2);
+    await loadStatus();
+  } finally {
+    document.querySelectorAll('button').forEach(b => b.disabled = false);
+  }
+}
+loadStatus().catch(err => { byId('result').textContent = String(err); });
 </script>
 </body>
 </html>
@@ -1197,9 +1371,22 @@ class ConsoleHandler(BaseHTTPRequestHandler):
         if self.path == "/api/status":
             self.send_json(status(self.paths))
             return
+        if self.path == "/api/settings":
+            self.send_json(settings_info(self.paths))
+            return
         self.send_json({"error": "未找到"}, HTTPStatus.NOT_FOUND)
 
     def do_POST(self) -> None:
+        if self.path == "/api/settings":
+            try:
+                length = int(self.headers.get("Content-Length") or "0")
+                payload = json.loads(self.rfile.read(length).decode("utf-8") or "{}")
+                result = save_user_settings(payload)
+                type(self).paths = Paths.from_env(settings=result["settings"])
+                self.send_json({"ok": True, "result": result})
+            except Exception as exc:
+                self.send_json({"ok": False, "error": str(exc)}, HTTPStatus.BAD_REQUEST)
+            return
         if self.path != "/api/apply":
             self.send_json({"error": "未找到"}, HTTPStatus.NOT_FOUND)
             return
@@ -1212,8 +1399,10 @@ class ConsoleHandler(BaseHTTPRequestHandler):
                 result = apply_hermes(self.paths, payload, dry_run=dry_run)
             elif target == "openclaw":
                 result = apply_openclaw(self.paths, payload, dry_run=dry_run)
+            elif target == "workbuddy":
+                result = install_workbuddy_model(self.paths, payload, dry_run=dry_run)
             else:
-                raise ValueError("target 必须是 hermes 或 openclaw")
+                raise ValueError("target 必须是 hermes、openclaw 或 workbuddy")
             self.send_json({"ok": True, "result": result})
         except Exception as exc:
             self.send_json({"ok": False, "error": str(exc)}, HTTPStatus.BAD_REQUEST)

@@ -31,9 +31,25 @@
     "真实写入前自动备份",
     "敏感字段脱敏输出"
   ],
-  "defaultWorkBuddyModel": {
-    "provider": "oxo",
-    "baseUrl": "https://api.oxoapi.com/v1",
-    "model": "qwen3.7-max"
+  "userConfig": {
+    "configFile": "~/.tianyuan-model-console/config.json",
+    "editablePaths": [
+      "Hermes config/auth/sessions",
+      "OpenClaw config/models/sessions/logs",
+      "WorkBuddy models",
+      "CodeBuddy models",
+      "WorkBuddy CLI"
+    ],
+    "editableModelFields": [
+      "provider",
+      "baseUrl",
+      "model",
+      "apiKey",
+      "apiKeyEnv",
+      "supportsToolCall",
+      "supportsImages",
+      "maxInputTokens",
+      "maxOutputTokens"
+    ]
   }
 }

@@ -5,9 +5,6 @@ THIS_DIR="$(cd "$(dirname "$0")" && pwd)"
 SOURCE_ROOT="$(cd "$THIS_DIR/.." && pwd)"
 APP_ROOT="${TMC_INSTALL_DIR:-$HOME/Applications/Tianyuan Model Console}"
 PYTHON="${TMC_PYTHON:-python3}"
-DEFAULT_PROVIDER="${TMC_PROVIDER:-oxo}"
-DEFAULT_MODEL="${TMC_MODEL:-qwen3.7-max}"
-DEFAULT_BASE_URL="${TMC_BASE_URL:-https://api.oxoapi.com/v1}"
 
 mkdir -p "$APP_ROOT"
 
@@ -30,14 +27,8 @@ chmod +x "$APP_ROOT/launch.command" \
 
 "$PYTHON" "$APP_ROOT/model_console.py" install-openclaw-plugin >/dev/null
 
-if [[ "${TMC_SKIP_WORKBUDDY:-0}" != "1" ]]; then
-  "$PYTHON" "$APP_ROOT/model_console.py" install-workbuddy \
-    --provider "$DEFAULT_PROVIDER" \
-    --model "$DEFAULT_MODEL" \
-    --base-url "$DEFAULT_BASE_URL" >/dev/null || true
-fi
-
 echo "天元模型控制台已安装到：$APP_ROOT"
 echo "启动命令：$APP_ROOT/standalone/TianyuanModelConsole.command"
 echo "网页地址：http://127.0.0.1:${TMC_PORT:-51280}"
+echo "OpenClaw / WorkBuddy / CodeBuddy 的路径和模型参数请在网页里的“软件配置”和“WorkBuddy / CodeBuddy”表单中填写。"
 open "$APP_ROOT" >/dev/null 2>&1 || true

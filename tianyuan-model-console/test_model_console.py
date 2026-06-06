@@ -167,6 +167,24 @@ class ModelConsoleTests(unittest.TestCase):
         self.assertTrue(info["standalone"]["installer"].endswith("install.command"))
         self.assertTrue(info["standalone"]["package_script"].endswith("package_standalone.sh"))
 
+    def test_user_settings_persist_and_override_default_paths(self):
+        config_path = Path(self.tmp.name) / "app_config.json"
+        custom_openclaw = Path(self.tmp.name) / "custom-openclaw.json"
+        result = mc.save_user_settings(
+            {
+                "openclaw_config": str(custom_openclaw),
+                "workbuddy_models": "~/custom-workbuddy-models.json",
+                "openclaw_logs": "",
+            },
+            config_path=config_path,
+        )
+        saved = json.loads(config_path.read_text(encoding="utf-8"))
+        self.assertEqual(saved["openclaw_config"], str(custom_openclaw))
+        self.assertNotIn("openclaw_logs", saved)
+        paths = mc.Paths.from_env(settings=result["settings"])
+        self.assertEqual(paths.openclaw_config, custom_openclaw)
+        self.assertEqual(paths.workbuddy_models, Path("~/custom-workbuddy-models.json").expanduser())
+
 
 if __name__ == "__main__":
     unittest.main()

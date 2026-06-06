@@ -10,3 +10,5 @@
 - `app_manifest.json`：产品功能和入口清单。
 
 默认网页地址是 `http://127.0.0.1:51280`。
+
+安装后不会自动写入 WorkBuddy / CodeBuddy 模型。打开网页后，在“软件配置”里填写 OpenClaw、WorkBuddy / CodeBuddy 等本地路径，再在“WorkBuddy / CodeBuddy”里填写 provider、Base URL、模型和 API Key 来源。

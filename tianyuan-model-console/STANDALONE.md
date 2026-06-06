@@ -49,17 +49,12 @@ TMC_PORT=51380 /Users/vv/.openclaw/openfei/tianyuan-model-console/standalone/Tia
 ~/Applications/Tianyuan Model Console
 ```
 
-安装器会复制本软件、注册 OpenClaw 插件，并尝试写入默认 WorkBuddy / CodeBuddy 模型：
+安装器只复制本软件并注册 OpenClaw 插件。OpenClaw、WorkBuddy / CodeBuddy 等路径和模型参数由用户打开网页后自行填写。
 
-- provider：`oxo`
-- Base URL：`https://api.oxoapi.com/v1`
-- model：`qwen3.7-max`
+网页端提供：
 
-如需跳过 WorkBuddy 写入：
-
-```bash
-TMC_SKIP_WORKBUDDY=1 /Users/vv/.openclaw/openfei/tianyuan-model-console/standalone/install.command
-```
+- “软件配置”：保存 Hermes、OpenClaw、WorkBuddy / CodeBuddy 的配置文件和日志/会话目录。
+- “WorkBuddy / CodeBuddy”：填写 provider、Base URL、模型 ID、API Key 来源、工具调用和图片能力，再预演或应用。
 
 ## 打包发布
 
