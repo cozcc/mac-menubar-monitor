@@ -1,0 +1,29 @@
+{
+  "name": "@tianyuan/model-console-openclaw",
+  "version": "2026.6.6",
+  "description": "天元模型控制台：Hermes / OpenClaw / WorkBuddy 本地模型路由插件",
+  "main": "index.js",
+  "scripts": {
+    "start": "python3 model_console.py serve --host 127.0.0.1 --port 51280",
+    "test": "python3 -m unittest -v",
+    "package:standalone": "bash scripts/package_standalone.sh"
+  },
+  "bin": {
+    "tianyuan-model-console": "bin/tianyuan-model-console.js"
+  },
+  "files": [
+    "**/*"
+  ],
+  "peerDependencies": {
+    "openclaw": ">=2026.3.22"
+  },
+  "openclaw": {
+    "extensions": [
+      "./index.js"
+    ],
+    "install": {
+      "localPath": "openfei/tianyuan-model-console",
+      "defaultChoice": "path"
+    }
+  }
+}
