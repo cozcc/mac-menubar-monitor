@@ -29,8 +29,10 @@ text = text.replace("__PORT__", str(port))
 Path(plist).write_text(text, encoding="utf-8")
 PY
 
-launchctl unload "$PLIST" >/dev/null 2>&1 || true
-launchctl load "$PLIST"
+DOMAIN="gui/$(id -u)"
+launchctl bootout "$DOMAIN" "$PLIST" >/dev/null 2>&1 || true
+launchctl bootstrap "$DOMAIN" "$PLIST"
+launchctl kickstart -k "$DOMAIN/com.tianyuan.model-console" >/dev/null 2>&1 || true
 
 echo "已安装后台自启动：$PLIST"
 echo "网页地址：http://$HOST:$PORT"

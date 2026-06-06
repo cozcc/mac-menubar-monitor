@@ -2,7 +2,7 @@
 
 这是一个用于 Hermes、OpenClaw 和 WorkBuddy 模型路由管理的小型本地控制台，也可以作为 OpenClaw 本地插件直接加载。
 
-当前版本已经整理为一个开箱即用的独立本地软件，同时保留 OpenClaw 插件和 WorkBuddy / CodeBuddy 配置器能力。
+当前版本已经整理为一个开箱即用的简洁版本地软件，同时保留 OpenClaw 插件和 WorkBuddy / CodeBuddy 配置器能力。
 
 它提供：
 
@@ -41,12 +41,21 @@ http://127.0.0.1:51280
 
 安装器只复制软件并注册 OpenClaw 插件。OpenClaw、WorkBuddy / CodeBuddy 等路径和模型参数由用户在网页里的“软件配置”和“WorkBuddy / CodeBuddy”表单中自行填写。
 
+简洁版网页只保留四块：
+
+- 状态：显示 Hermes、OpenClaw、WorkBuddy 路径和 Token 总量。
+- 模型配置：统一填写目标、provider、Base URL、模型，再预演或应用。
+- 路径设置：折叠展示 Hermes、OpenClaw、WorkBuddy / CodeBuddy 的本地路径。
+- 结果：显示每次操作返回的 JSON。
+
 网页端可保存的配置包括：
 
 - Hermes 配置文件、密钥文件和会话目录。
 - OpenClaw 配置文件、模型目录、会话目录和日志目录。
 - WorkBuddy / CodeBuddy 模型配置文件。
 - WorkBuddy CLI 路径。
+
+后续要继续修改界面时，核心页面在 `model_console.py` 的 `INDEX_HTML` 常量中；后端接口集中在 `/api/status`、`/api/settings` 和 `/api/apply`。
 
 可选安装后台自启动：
 

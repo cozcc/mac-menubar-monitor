@@ -1116,44 +1116,89 @@ INDEX_HTML = r"""<!doctype html>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>天元模型控制台</title>
   <style>
-    :root { color-scheme: light; --ink:#17202a; --muted:#5f6c7b; --line:#d9dee7; --bg:#f7f9fc; --panel:#fff; --accent:#1167b1; --ok:#167a4a; --warn:#9a5b00; }
-    * { box-sizing: border-box; }
-    body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; color:var(--ink); background:var(--bg); }
-    header { padding:20px 24px 10px; border-bottom:1px solid var(--line); background:#fff; }
-    h1 { margin:0 0 6px; font-size:22px; font-weight:650; letter-spacing:0; }
-    main { padding:18px 24px 28px; display:grid; grid-template-columns: minmax(320px, 1fr) minmax(320px, 1fr); gap:16px; }
-    section { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:14px; }
-    h2 { margin:0 0 12px; font-size:16px; }
-    h3 { margin:14px 0 8px; font-size:13px; color:var(--muted); text-transform:uppercase; }
-    table { width:100%; border-collapse:collapse; font-size:13px; }
-    th, td { padding:7px 6px; border-bottom:1px solid #edf0f4; text-align:left; vertical-align:top; word-break:break-word; }
-    th { color:var(--muted); font-weight:600; }
-    label { display:block; font-size:12px; color:var(--muted); margin:10px 0 4px; }
-    input, select { width:100%; padding:8px 9px; border:1px solid #cdd5df; border-radius:6px; background:#fff; font:inherit; }
-    input[type="checkbox"] { width:auto; margin-right:6px; }
-    .row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-    .path-grid { display:grid; grid-template-columns:repeat(2, minmax(260px, 1fr)); gap:8px 12px; }
-    .actions { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
-    button { border:1px solid #0f5e9e; background:var(--accent); color:#fff; border-radius:6px; padding:8px 11px; font-weight:600; cursor:pointer; }
+    :root { color-scheme: light; --ink:#17202a; --muted:#667481; --line:#dbe1e8; --bg:#f6f8fb; --panel:#fff; --accent:#1266a8; --soft:#eef5fb; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    header { background:#fff; border-bottom:1px solid var(--line); padding:16px 20px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    h1 { margin:0; font-size:20px; font-weight:650; letter-spacing:0; }
+    main { max-width:980px; margin:0 auto; padding:16px; display:grid; gap:12px; }
+    section, details { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:14px; }
+    summary { cursor:pointer; font-weight:650; }
+    h2 { margin:0 0 12px; font-size:15px; }
+    label { display:block; margin:10px 0 4px; color:var(--muted); font-size:12px; }
+    input, select { width:100%; min-height:36px; border:1px solid #cbd5df; border-radius:6px; background:#fff; padding:7px 9px; font:inherit; }
+    input[type="checkbox"] { width:auto; min-height:0; margin-right:6px; }
+    button { border:1px solid var(--accent); border-radius:6px; background:var(--accent); color:#fff; padding:8px 12px; font-weight:650; cursor:pointer; }
     button.secondary { background:#fff; color:var(--accent); }
     button:disabled { opacity:.55; cursor:wait; }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th, td { padding:7px 6px; border-bottom:1px solid #edf1f5; text-align:left; vertical-align:top; word-break:break-word; }
+    th { color:var(--muted); font-weight:600; }
+    pre { margin:0; max-height:240px; overflow:auto; white-space:pre-wrap; word-break:break-word; background:#f2f5f8; border:1px solid #e1e7ee; border-radius:6px; padding:10px; font-size:12px; }
+    .grid { display:grid; grid-template-columns:repeat(2, minmax(260px,1fr)); gap:10px 12px; }
+    .actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+    .status { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:8px; }
+    .tile { background:var(--soft); border:1px solid #d7e7f4; border-radius:8px; padding:10px; min-height:74px; }
+    .tile b { display:block; font-size:12px; color:var(--muted); margin-bottom:5px; }
+    .tile span { display:block; font-size:14px; word-break:break-word; }
     .muted { color:var(--muted); }
-    .ok { color:var(--ok); }
-    .warn { color:var(--warn); }
-    pre { white-space:pre-wrap; word-break:break-word; background:#f2f5f9; border:1px solid #e2e7ef; border-radius:6px; padding:10px; max-height:240px; overflow:auto; }
-    .wide { grid-column:1 / -1; }
-    @media (max-width: 850px) { main { grid-template-columns:1fr; padding:12px; } header { padding:16px 12px 8px; } }
+    .hidden { display:none !important; }
+    @media (max-width:760px) { header { align-items:flex-start; flex-direction:column; } main { padding:12px; } .grid, .status { grid-template-columns:1fr; } }
   </style>
 </head>
 <body>
   <header>
     <h1>天元模型控制台</h1>
-    <div class="muted">本地查看 Hermes / OpenClaw 模型路由，一键切换上游通道，并汇总可推断的 Token 用量。密钥不会在页面显示。</div>
+    <button class="secondary" onclick="loadStatus()">刷新</button>
   </header>
   <main>
-    <section class="wide">
-      <h2>软件配置</h2>
-      <div class="path-grid">
+    <section>
+      <h2>状态</h2>
+      <div class="status">
+        <div class="tile"><b>Hermes</b><span id="tileHermes">正在加载</span></div>
+        <div class="tile"><b>OpenClaw</b><span id="tileOpenclaw">正在加载</span></div>
+        <div class="tile"><b>WorkBuddy</b><span id="tileWorkbuddy">正在加载</span></div>
+        <div class="tile"><b>Token</b><span id="tileUsage">正在加载</span></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>模型配置</h2>
+      <div class="grid">
+        <div>
+          <label>目标</label>
+          <select id="target" onchange="syncTargetFields()">
+            <option value="openclaw">OpenClaw</option>
+            <option value="hermes">Hermes</option>
+            <option value="workbuddy">WorkBuddy / CodeBuddy</option>
+          </select>
+        </div>
+        <div id="agentField">
+          <label>OpenClaw 智能体</label>
+          <select id="agent"></select>
+        </div>
+        <div><label>上游通道</label><input id="provider" placeholder="provider"></div>
+        <div><label>模型</label><input id="model" placeholder="model-id"></div>
+        <div><label>Base URL</label><input id="baseUrl" placeholder="https://example.com/v1"></div>
+        <div id="apiModeField"><label>API 模式</label><input id="apiMode" value="chat_completions"></div>
+        <div id="apiKeyField"><label>API Key</label><input id="apiKey" type="password" placeholder="可留空"></div>
+        <div id="apiKeyEnvField"><label>API Key 环境变量</label><input id="apiKeyEnv" placeholder="可留空"></div>
+        <div id="maxInputField"><label>最大输入 Token</label><input id="maxInput" type="number" value="131072"></div>
+        <div id="maxOutputField"><label>最大输出 Token</label><input id="maxOutput" type="number" value="8192"></div>
+      </div>
+      <div id="capabilityField" class="actions">
+        <label><input id="toolCall" type="checkbox">工具调用</label>
+        <label><input id="images" type="checkbox">图片输入</label>
+      </div>
+      <div class="actions">
+        <button class="secondary" onclick="applyRoute(true)">预演</button>
+        <button onclick="applyRoute(false)">应用</button>
+      </div>
+    </section>
+
+    <details>
+      <summary>路径设置</summary>
+      <div class="grid">
         <div><label>Hermes 配置文件</label><input id="cfgHermesConfig"></div>
         <div><label>Hermes 密钥文件</label><input id="cfgHermesAuth"></div>
         <div><label>Hermes 会话目录</label><input id="cfgHermesSessions"></div>
@@ -1166,70 +1211,22 @@ INDEX_HTML = r"""<!doctype html>
         <div><label>WorkBuddy CLI</label><input id="cfgWorkbuddyCli"></div>
       </div>
       <div class="actions">
-        <button class="secondary" onclick="loadStatus()">重新读取</button>
-        <button onclick="saveSettings()">保存配置</button>
+        <button onclick="saveSettings()">保存路径</button>
       </div>
       <div class="muted">配置文件：<span id="settingsPath"></span></div>
-    </section>
-    <section>
-      <h2>Hermes</h2>
-      <div id="hermesStatus" class="muted">正在加载...</div>
-      <h3>切换 Hermes</h3>
-      <label>上游通道</label><input id="hProvider" placeholder="oxo">
-      <label>模型</label><input id="hModel" placeholder="qwen3.7-max">
-      <label>Base URL</label><input id="hBase" placeholder="https://api.oxoapi.com/v1">
-      <label>API 模式</label><input id="hMode" value="chat_completions">
-      <div class="actions">
-        <button class="secondary" onclick="applyRoute('hermes', true)">预演</button>
-        <button onclick="applyRoute('hermes', false)">应用</button>
-      </div>
-    </section>
-    <section>
-      <h2>OpenClaw</h2>
-      <div id="openclawStatus" class="muted">正在加载...</div>
-      <h3>切换 OpenClaw 智能体</h3>
-      <label>智能体</label><select id="oAgent"></select>
-      <label>上游通道</label><input id="oProvider" placeholder="oxo">
-      <label>模型</label><input id="oModel" placeholder="claude-opus-4-7">
-      <label>Base URL</label><input id="oBase" placeholder="https://api.oxoapi.com/v1">
-      <div class="actions">
-        <button class="secondary" onclick="applyRoute('openclaw', true)">预演</button>
-        <button onclick="applyRoute('openclaw', false)">应用</button>
-      </div>
-    </section>
-    <section class="wide">
-      <h2>WorkBuddy / CodeBuddy</h2>
-      <div class="row">
-        <div><label>上游通道</label><input id="wProvider" placeholder="例如 openai 或自定义通道名"></div>
-        <div><label>模型</label><input id="wModel" placeholder="实际模型 ID"></div>
-      </div>
-      <label>Base URL</label><input id="wBase" placeholder="OpenAI 兼容 Base URL">
-      <div class="row">
-        <div><label>API Key</label><input id="wApiKey" type="password" placeholder="可留空"></div>
-        <div><label>API Key 环境变量</label><input id="wApiKeyEnv" placeholder="可留空"></div>
-      </div>
-      <div class="row">
-        <div><label>最大输入 Token</label><input id="wMaxInput" type="number" value="131072"></div>
-        <div><label>最大输出 Token</label><input id="wMaxOutput" type="number" value="8192"></div>
-      </div>
-      <label><input id="wToolCall" type="checkbox">支持工具调用</label>
-      <label><input id="wImages" type="checkbox">支持图片输入</label>
-      <div class="actions">
-        <button class="secondary" onclick="applyRoute('workbuddy', true)">预演</button>
-        <button onclick="applyRoute('workbuddy', false)">应用</button>
-      </div>
-    </section>
-    <section class="wide">
+    </details>
+
+    <details>
+      <summary>详细状态</summary>
       <h2>上游通道</h2>
       <div id="providers"></div>
-    </section>
-    <section class="wide">
       <h2>Token 用量</h2>
       <div id="usage"></div>
-    </section>
-    <section class="wide">
-      <h2>操作结果</h2>
-      <pre id="result">尚未执行操作。</pre>
+    </details>
+
+    <section>
+      <h2>结果</h2>
+      <pre id="result">就绪。</pre>
     </section>
   </main>
 <script>
@@ -1253,91 +1250,120 @@ function table(rows, headers) {
   return '<table><thead><tr>' + headers.map(h => '<th>'+esc(h)+'</th>').join('') + '</tr></thead><tbody>' +
     rows.map(r => '<tr>' + headers.map(h => '<td>'+esc(r[h])+'</td>').join('') + '</tr>').join('') + '</tbody></table>';
 }
+function setBusy(busy) { document.querySelectorAll('button').forEach(button => button.disabled = busy); }
+function setText(id, text) { byId(id).textContent = text || '未配置'; }
+function splitModelRef(value) {
+  const text = String(value || '');
+  if (!text.includes('/')) return ['', text];
+  const parts = text.split('/');
+  return [parts.shift(), parts.join('/')];
+}
+function syncTargetFields() {
+  const target = byId('target').value;
+  byId('agentField').classList.toggle('hidden', target !== 'openclaw');
+  byId('apiModeField').classList.toggle('hidden', target !== 'hermes');
+  for (const id of ['apiKeyField', 'apiKeyEnvField', 'maxInputField', 'maxOutputField', 'capabilityField']) {
+    byId(id).classList.toggle('hidden', target !== 'workbuddy');
+  }
+}
+function fillFormFromStatus(target) {
+  const h = statusCache?.hermes?.model || {};
+  const agents = statusCache?.openclaw?.agents || [];
+  const main = agents.find(agent => agent.default) || agents[0] || {};
+  const providers = statusCache?.openclaw?.providers || {};
+  if (target === 'hermes') {
+    byId('provider').value = String(h.provider || '').replace(/^custom:/, '');
+    byId('model').value = h.default || '';
+    byId('baseUrl').value = h.base_url || '';
+    byId('apiMode').value = h.api_mode || 'chat_completions';
+  } else if (target === 'openclaw') {
+    const [provider, model] = splitModelRef(main.model);
+    byId('agent').value = main.id || '';
+    byId('provider').value = provider || '';
+    byId('model').value = model || '';
+    byId('baseUrl').value = providers[provider]?.baseUrl || '';
+  }
+}
 async function loadStatus() {
   const res = await fetch('/api/status');
   statusCache = await res.json();
   const settings = statusCache.settings || {};
   const effective = settings.effective_paths || {};
-  for (const [key, id] of pathInputs) {
-    byId(id).value = effective[key] || '';
-  }
+  for (const [key, id] of pathInputs) byId(id).value = effective[key] || '';
   byId('settingsPath').textContent = settings.config_path || '';
 
-  const h = statusCache.hermes || {};
-  const hm = h.model || {};
-  byId('hermesStatus').innerHTML = table([{上游通道: hm.provider, 模型: hm.default, BaseURL: hm.base_url, API模式: hm.api_mode}], ['上游通道','模型','BaseURL','API模式']);
-  byId('hProvider').value = String(hm.provider || '').replace(/^custom:/, '');
-  byId('hModel').value = hm.default || '';
-  byId('hBase').value = hm.base_url || '';
-  byId('hMode').value = hm.api_mode || 'chat_completions';
+  const hermesModel = statusCache.hermes?.model || {};
+  setText('tileHermes', [hermesModel.provider, hermesModel.default].filter(Boolean).join(' / '));
+  const agents = statusCache.openclaw?.agents || [];
+  const main = agents.find(agent => agent.default) || agents[0] || {};
+  setText('tileOpenclaw', main.model || '');
+  setText('tileWorkbuddy', effective.workbuddy_models || '');
+  setText('tileUsage', String(statusCache.usage?.totals?.total ?? 0));
 
-  const oc = statusCache.openclaw || {};
-  const agents = oc.agents || [];
-  byId('openclawStatus').innerHTML = table(agents.map(a => ({智能体:a.id, 模型:a.model, 上游通道:a.provider, 默认:a.default})), ['智能体','模型','上游通道','默认']);
-  const select = byId('oAgent');
-  select.innerHTML = agents.map(a => '<option value="'+esc(a.id)+'">'+esc(a.id)+'</option>').join('');
-  const main = agents.find(a => a.default) || agents[0] || {};
-  select.value = main.id || '';
-  if (main.model && main.model.includes('/')) {
-    const parts = main.model.split('/');
-    byId('oProvider').value = parts.shift();
-    byId('oModel').value = parts.join('/');
-  }
-  const providers = oc.providers || {};
-  const firstProvider = providers[byId('oProvider').value];
-  byId('oBase').value = firstProvider ? firstProvider.baseUrl : '';
+  const agentSelect = byId('agent');
+  agentSelect.innerHTML = agents.map(agent => '<option value="'+esc(agent.id)+'">'+esc(agent.id)+'</option>').join('');
+  fillFormFromStatus(byId('target').value);
+
   const providerRows = [];
-  for (const [name, p] of Object.entries(providers)) providerRows.push({上游通道:name, BaseURL:p.baseUrl, API:p.api, 模型数:p.model_count});
+  for (const [name, provider] of Object.entries(statusCache.openclaw?.providers || {})) {
+    providerRows.push({上游通道:name, BaseURL:provider.baseUrl, API:provider.api, 模型数:provider.model_count});
+  }
   byId('providers').innerHTML = table(providerRows, ['上游通道','BaseURL','API','模型数']);
-  const usage = statusCache.usage || {};
-  const usageRows = Object.entries(usage.by_model || {}).map(([model, u]) => ({模型:model, 输入:u.prompt, 输出:u.completion, 总计:u.total, 缓存读取:u.cache_read, 缓存写入:u.cache_write}));
-  byId('usage').innerHTML = table(usageRows, ['模型','输入','输出','总计','缓存读取','缓存写入']) +
-    '<div class="muted">已扫描文件：'+esc(usage.scanned_file_count)+'；记录数：'+esc(usage.record_count)+'</div>';
+  const usageRows = Object.entries(statusCache.usage?.by_model || {}).map(([model, usage]) => ({
+    模型:model,
+    输入:usage.prompt,
+    输出:usage.completion,
+    总计:usage.total,
+  }));
+  byId('usage').innerHTML = table(usageRows, ['模型','输入','输出','总计']);
+  syncTargetFields();
 }
 async function saveSettings() {
   const payload = {};
   for (const [key, id] of pathInputs) payload[key] = byId(id).value;
-  document.querySelectorAll('button').forEach(b => b.disabled = true);
+  setBusy(true);
   try {
     const res = await fetch('/api/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
     const data = await res.json();
     byId('result').textContent = JSON.stringify(data, null, 2);
     await loadStatus();
   } finally {
-    document.querySelectorAll('button').forEach(b => b.disabled = false);
+    setBusy(false);
   }
 }
-async function applyRoute(target, dryRun) {
-  let payload = {};
-  if (target === 'hermes') {
-    payload = {target, dry_run: dryRun, provider:byId('hProvider').value, model:byId('hModel').value, base_url:byId('hBase').value, api_mode:byId('hMode').value};
-  } else if (target === 'openclaw') {
-    payload = {target, dry_run: dryRun, agent_id:byId('oAgent').value, provider:byId('oProvider').value, model:byId('oModel').value, base_url:byId('oBase').value};
-  } else if (target === 'workbuddy') {
-    payload = {
-      target,
-      dry_run: dryRun,
-      provider: byId('wProvider').value,
-      model: byId('wModel').value,
-      base_url: byId('wBase').value,
-      api_key: byId('wApiKey').value,
-      api_key_env: byId('wApiKeyEnv').value,
-      supports_tool_call: byId('wToolCall').checked,
-      supports_images: byId('wImages').checked,
-      max_input_tokens: Number(byId('wMaxInput').value || 131072),
-      max_output_tokens: Number(byId('wMaxOutput').value || 8192)
-    };
+async function applyRoute(dryRun) {
+  const target = byId('target').value;
+  const payload = {
+    target,
+    dry_run: dryRun,
+    provider: byId('provider').value,
+    model: byId('model').value,
+    base_url: byId('baseUrl').value,
+  };
+  if (target === 'openclaw') payload.agent_id = byId('agent').value;
+  if (target === 'hermes') payload.api_mode = byId('apiMode').value;
+  if (target === 'workbuddy') {
+    payload.api_key = byId('apiKey').value;
+    payload.api_key_env = byId('apiKeyEnv').value;
+    payload.supports_tool_call = byId('toolCall').checked;
+    payload.supports_images = byId('images').checked;
+    payload.max_input_tokens = Number(byId('maxInput').value || 131072);
+    payload.max_output_tokens = Number(byId('maxOutput').value || 8192);
   }
-  document.querySelectorAll('button').forEach(b => b.disabled = true);
+  setBusy(true);
   try {
     const res = await fetch('/api/apply', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
     const data = await res.json();
     byId('result').textContent = JSON.stringify(data, null, 2);
     await loadStatus();
   } finally {
-    document.querySelectorAll('button').forEach(b => b.disabled = false);
+    setBusy(false);
   }
 }
+byId('target').addEventListener('change', () => {
+  syncTargetFields();
+  fillFormFromStatus(byId('target').value);
+});
 loadStatus().catch(err => { byId('result').textContent = String(err); });
 </script>
 </body>

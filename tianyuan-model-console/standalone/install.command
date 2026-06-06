@@ -30,5 +30,5 @@ chmod +x "$APP_ROOT/launch.command" \
 echo "天元模型控制台已安装到：$APP_ROOT"
 echo "启动命令：$APP_ROOT/standalone/TianyuanModelConsole.command"
 echo "网页地址：http://127.0.0.1:${TMC_PORT:-51280}"
-echo "OpenClaw / WorkBuddy / CodeBuddy 的路径和模型参数请在网页里的“软件配置”和“WorkBuddy / CodeBuddy”表单中填写。"
+echo "OpenClaw / WorkBuddy / CodeBuddy 的路径和模型参数请在网页里的“路径设置”和“模型配置”中填写。"
 open "$APP_ROOT" >/dev/null 2>&1 || true
