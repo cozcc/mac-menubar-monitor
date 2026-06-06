@@ -1,0 +1,27 @@
+{
+  "id": "tianyuan-model-console",
+  "skills": [],
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": true,
+    "properties": {
+      "host": {
+        "type": "string",
+        "default": "127.0.0.1"
+      },
+      "port": {
+        "type": "number",
+        "default": 51280
+      },
+      "script": {
+        "type": "string"
+      },
+      "workbuddyModels": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

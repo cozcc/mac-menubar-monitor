@@ -1,0 +1,39 @@
+{
+  "id": "com.tianyuan.model-console",
+  "name": "Tianyuan Model Console",
+  "nameZh": "天元模型控制台",
+  "version": "2026.6.6",
+  "releaseDate": "2026-06-06",
+  "threadId": "019e987d-4e3e-7660-8e80-df50b0859b45",
+  "defaultHost": "127.0.0.1",
+  "defaultPort": 51280,
+  "entrypoints": {
+    "web": "http://127.0.0.1:51280",
+    "standaloneLauncher": "standalone/TianyuanModelConsole.command",
+    "installer": "standalone/install.command",
+    "cli": "model_console.py",
+    "openclawPlugin": "index.js"
+  },
+  "integrations": [
+    "Hermes",
+    "OpenClaw",
+    "WorkBuddy",
+    "CodeBuddy"
+  ],
+  "features": [
+    "中文网页控制台",
+    "Hermes provider/Base URL/model 监控",
+    "OpenClaw 智能体模型路由监控",
+    "一键预演和应用模型切换",
+    "Token 用量本地推断汇总",
+    "OpenClaw 插件注册",
+    "WorkBuddy/CodeBuddy 模型写入",
+    "真实写入前自动备份",
+    "敏感字段脱敏输出"
+  ],
+  "defaultWorkBuddyModel": {
+    "provider": "oxo",
+    "baseUrl": "https://api.oxoapi.com/v1",
+    "model": "qwen3.7-max"
+  }
+}
